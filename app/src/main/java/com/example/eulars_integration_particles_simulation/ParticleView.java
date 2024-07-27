@@ -11,6 +11,274 @@ import android.view.View;
 import android.graphics.Paint;
 
 import java.util.Random;
+
+public class ParticleView extends View implements SensorEventListener {
+
+    private int NUM_PARTICLES = 10; // Set to 10 for at least 10 different balls
+    private final float PARTICLE_SIZE = 15; // in pixels
+
+    private float[] xPositions;
+    private float[] yPositions;
+    private float[] xVelocities;
+    private float[] yVelocities;
+
+    private float accelerometerX;
+    private float accelerometerY;
+
+    private final float DEFAULT_GRAVITY = 80.81f;
+    private float gravity = DEFAULT_GRAVITY; // m/s^2
+    private final float VISCOSITY = 0.019f;
+
+    private Paint[] paints;
+
+    public ParticleView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        initParticles();
+    }
+
+    private void initParticles() {
+        paints = new Paint[NUM_PARTICLES];
+        for (int i = 0; i < NUM_PARTICLES; i++) {
+            paints[i] = new Paint();
+            paints[i].setColor(getRandomColor());
+            paints[i].setStyle(Paint.Style.FILL);
+        }
+
+        xPositions = new float[NUM_PARTICLES];
+        yPositions = new float[NUM_PARTICLES];
+        xVelocities = new float[NUM_PARTICLES];
+        yVelocities = new float[NUM_PARTICLES];
+        invalidate(); // redraw the view with new particle positions
+
+        // initialize particle positions randomly
+        Random random = new Random();
+        for (int i = 0; i < NUM_PARTICLES; i++) {
+            xPositions[i] = random.nextFloat() * getWidth();
+            yPositions[i] = random.nextFloat() * getHeight();
+            xVelocities[i] = random.nextFloat() * 200 - 100;
+            yVelocities[i] = random.nextFloat() * 200 - 100;
+        }
+    }
+
+    private int getRandomColor() {
+        Random random = new Random();
+        return Color.rgb(random.nextInt(256), random.nextInt(256), random.nextInt(256));
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            accelerometerX = event.values[0];
+            accelerometerY = event.values[1];
+            invalidate(); // redraw the view with new particle positions
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+    }
+
+    @Override
+    public void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+
+        // simulate particle motion using Euler integration
+        float deltaTime = 0.1f;
+        for (int i = 0; i < NUM_PARTICLES; i++) {
+            float xAccel = -gravity * accelerometerX - VISCOSITY * xVelocities[i];
+            float yAccel = gravity * accelerometerY - VISCOSITY * yVelocities[i];
+            xVelocities[i] += xAccel * deltaTime;
+            yVelocities[i] += yAccel * deltaTime;
+            xPositions[i] += xVelocities[i] * deltaTime;
+            yPositions[i] += yVelocities[i] * deltaTime;
+
+            // ensure particles stay within the view bounds
+            if (xPositions[i] < 0) {
+                xPositions[i] = 0;
+                xVelocities[i] = -xVelocities[i];
+            } else if (xPositions[i] > getWidth()) {
+                xPositions[i] = getWidth();
+                xVelocities[i] = -xVelocities[i];
+            }
+            if (yPositions[i] < 0) {
+                yPositions[i] = 0;
+                yVelocities[i] = -yVelocities[i];
+            } else if (yPositions[i] > getHeight()) {
+                yPositions[i] = getHeight();
+                yVelocities[i] = -yVelocities[i];
+            }
+
+            // draw particle
+            canvas.drawCircle(xPositions[i], yPositions[i], PARTICLE_SIZE, paints[i]);
+        }
+    }
+
+    public void changeParticleColor(int color) {
+        for (Paint paint : paints) {
+            paint.setColor(color);
+        }
+        invalidate(); // redraw the view with the new particle color
+    }
+
+    public void setGravity(float gravity) {
+        this.gravity = gravity;
+    }
+
+    public void resetParticles() {
+        initParticles();
+    }
+}
+
+
+
+/*
+
+package com.example.eulars_integration_particles_simulation;
+
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.util.AttributeSet;
+import android.view.View;
+import android.graphics.Paint;
+
+import java.util.Random;
+
+public class ParticleView extends View implements SensorEventListener {
+
+    private int NUM_PARTICLES = 10; // Set to 10 for at least 10 different balls
+    private final float PARTICLE_SIZE = 15; // in pixels
+
+    private float[] xPositions;
+    private float[] yPositions;
+    private float[] xVelocities;
+    private float[] yVelocities;
+
+    private float accelerometerX;
+    private float accelerometerY;
+
+    private final float DEFAULT_GRAVITY = 80.81f;
+    private float gravity = DEFAULT_GRAVITY; // m/s^2
+    private final float VISCOSITY = 0.019f;
+
+    private Paint[] paints;
+
+    public ParticleView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+
+        paints = new Paint[NUM_PARTICLES];
+        for (int i = 0; i < NUM_PARTICLES; i++) {
+            paints[i] = new Paint();
+            paints[i].setColor(getRandomColor());
+            paints[i].setStyle(Paint.Style.FILL);
+        }
+
+        xPositions = new float[NUM_PARTICLES];
+        yPositions = new float[NUM_PARTICLES];
+        xVelocities = new float[NUM_PARTICLES];
+        yVelocities = new float[NUM_PARTICLES];
+        invalidate(); // redraw the view with new particle positions
+
+        // initialize particle positions randomly
+        Random random = new Random();
+        for (int i = 0; i < NUM_PARTICLES; i++) {
+            xPositions[i] = random.nextFloat() * getWidth();
+            yPositions[i] = random.nextFloat() * getHeight();
+            xVelocities[i] = random.nextFloat() * 200 - 100;
+            yVelocities[i] = random.nextFloat() * 200 - 100;
+        }
+    }
+
+    private int getRandomColor() {
+        Random random = new Random();
+        return Color.rgb(random.nextInt(256), random.nextInt(256), random.nextInt(256));
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            accelerometerX = event.values[0];
+            accelerometerY = event.values[1];
+            invalidate(); // redraw the view with new particle positions
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+    }
+
+    @Override
+    public void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+
+        // simulate particle motion using Euler integration
+        float deltaTime = 0.1f;
+        for (int i = 0; i < NUM_PARTICLES; i++) {
+            float xAccel = -gravity * accelerometerX - VISCOSITY * xVelocities[i];
+            float yAccel = gravity * accelerometerY - VISCOSITY * yVelocities[i];
+            xVelocities[i] += xAccel * deltaTime;
+            yVelocities[i] += yAccel * deltaTime;
+            xPositions[i] += xVelocities[i] * deltaTime;
+            yPositions[i] += yVelocities[i] * deltaTime;
+
+            // ensure particles stay within the view bounds
+            if (xPositions[i] < 0) {
+                xPositions[i] = 0;
+                xVelocities[i] = -xVelocities[i];
+            } else if (xPositions[i] > getWidth()) {
+                xPositions[i] = getWidth();
+                xVelocities[i] = -xVelocities[i];
+            }
+            if (yPositions[i] < 0) {
+                yPositions[i] = 0;
+                yVelocities[i] = -yVelocities[i];
+            } else if (yPositions[i] > getHeight()) {
+                yPositions[i] = getHeight();
+                yVelocities[i] = -yVelocities[i];
+            }
+
+            // draw particle
+            canvas.drawCircle(xPositions[i], yPositions[i], PARTICLE_SIZE, paints[i]);
+        }
+    }
+
+    public void changeParticleColor(int color) {
+        for (Paint paint : paints) {
+            paint.setColor(color);
+        }
+        invalidate(); // redraw the view with the new particle color
+    }
+
+    public void setGravity(float gravity) {
+        this.gravity = gravity;
+    }
+}
+*/
+
+
+
+////////////////////////////////////////////////////////
+
+
+/*
+package com.example.eulars_integration_particles_simulation;
+
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.util.AttributeSet;
+import android.view.View;
+import android.graphics.Paint;
+import android.widget.SeekBar;
+
+import java.util.Random;
+
 public class ParticleView extends View implements SensorEventListener {
 
     private int NUM_PARTICLES = 500;
@@ -24,7 +292,126 @@ public class ParticleView extends View implements SensorEventListener {
     private float accelerometerX;
     private float accelerometerY;
 
-    private final float GRAVITY = 120.81f; // m/s^2
+    private final float DEFAULT_GRAVITY = 80.81f;
+    private float gravity = DEFAULT_GRAVITY; // m/s^2
+    private final float VISCOSITY = 0.019f;
+
+    private Paint paint;
+
+    public ParticleView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+
+        paint = new Paint();
+        paint.setColor(Color.RED);
+        paint.setStyle(Paint.Style.FILL);
+
+        xPositions = new float[NUM_PARTICLES];
+        yPositions = new float[NUM_PARTICLES];
+        xVelocities = new float[NUM_PARTICLES];
+        yVelocities = new float[NUM_PARTICLES];
+        invalidate(); // redraw the view with new particle positions
+
+        // initialize particle positions randomly
+        Random random = new Random();
+
+        for (int i = 0; i < NUM_PARTICLES; i++) {
+            xPositions[i] = random.nextFloat() * getWidth();
+            yPositions[i] = random.nextFloat() * getHeight();
+        }
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            accelerometerX = event.values[0];
+            accelerometerY = event.values[1];
+            invalidate(); // redraw the view with new particle positions
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+    }
+
+    @Override
+    public void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+
+        // simulate particle motion using Euler integration
+        float deltaTime = 0.1f;
+        for (int i = 0; i < NUM_PARTICLES; i++) {
+            float xAccel = -gravity * accelerometerX - VISCOSITY * xVelocities[i];
+            float yAccel = gravity * accelerometerY - VISCOSITY * yVelocities[i];
+            xVelocities[i] += xAccel * deltaTime;
+            yVelocities[i] += yAccel * deltaTime;
+            xPositions[i] += xVelocities[i] * deltaTime;
+            yPositions[i] += yVelocities[i] * deltaTime;
+
+            // ensure particles stay within the view bounds
+            if (xPositions[i] < 0) {
+                xPositions[i] = 0;
+                xVelocities[i] = -xVelocities[i];
+            } else if (xPositions[i] > getWidth()) {
+                xPositions[i] = getWidth();
+                xVelocities[i] = -xVelocities[i];
+            }
+            if (yPositions[i] < 0) {
+                yPositions[i] = 0;
+                yVelocities[i] = -yVelocities[i];
+            } else if (yPositions[i] > getHeight()) {
+                yPositions[i] = getHeight();
+                yVelocities[i] = -yVelocities[i];
+            }
+
+            // draw particle
+            canvas.drawCircle(xPositions[i], yPositions[i], PARTICLE_SIZE, paint);
+        }
+    }
+
+    public void changeParticleColor(int color) {
+        paint.setColor(color);
+        invalidate(); // redraw the view with the new particle color
+    }
+
+    public void setGravity(float gravity) {
+        this.gravity = gravity;
+    }
+}*/
+
+
+
+
+/////////////////////////////////////////////////////////////////// 27 july 2024 .////////////////////////////
+
+
+/*package com.example.eulars_integration_particles_simulation;
+
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.util.AttributeSet;
+import android.view.View;
+import android.graphics.Paint;
+import java.util.Random;
+
+
+public class ParticleView extends View implements SensorEventListener {
+
+    private int NUM_PARTICLES = 500;
+    private final float PARTICLE_SIZE = 15; // in pixels
+
+    private float[] xPositions;
+    private float[] yPositions;
+    private float[] xVelocities;
+    private float[] yVelocities;
+
+    private float accelerometerX;
+    private float accelerometerY;
+
+    private final float GRAVITY = 80.81f; // m/s^2
     private final float VISCOSITY = 0.019f;
 
     private Paint paint;
@@ -168,6 +555,16 @@ public class ParticleView extends View implements SensorEventListener {
             canvas.drawCircle(xPositions[i], yPositions[i], PARTICLE_SIZE, paint6);
         }
 
+
+
+        /////////////////////////   27 July 2024 ////////////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////////////////// 27 july 2024 .////////////////////////////
+
+
+
+
+
          //draw additional balls with different colors and starting positions
 //        paint.setColor(Color.WHITE);
 //        canvas.drawCircle(getWidth() * 0.25f, getHeight() * 0.25f, PARTICLE_SIZE, paint);
@@ -181,7 +578,7 @@ public class ParticleView extends View implements SensorEventListener {
 
 
     // implement other required methods for SensorEventListener
-}
+}*/
 
 
 
